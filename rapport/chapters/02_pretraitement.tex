@@ -1,1 +1,82 @@
-% Chapitre 2 : preparation des donnees et prevention du data leakage.
+\chapter{Prétraitement des données et ingénierie des caractéristiques}
+\label{chap:preprocessing}
+\thispagestyle{plain}
+
+\section{Principes et séquence de préparation}
+Le prétraitement transforme les enregistrements bruts en une matrice numérique compatible avec les algorithmes de classification. Pour préserver la validité de l'évaluation, les opérations doivent être séparées selon leur nature : les règles déterministes de nettoyage et d'ingénierie sont documentées, tandis que les paramètres appris à partir de la distribution des données sont ajustés uniquement sur le jeu d'entraînement.
+
+La séquence appliquée est la suivante : retrait de l'identifiant, nettoyage des modalités rares et transformations explicites, création des variables indicatrices, séparation stratifiée train/test, puis ajustement de l'imputation et de la standardisation sur le train. Le jeu de test ne sert ensuite qu'à appliquer les transformations déjà ajustées et à évaluer les modèles.
+
+\section{Nettoyage et ingénierie des caractéristiques}
+\subsection{Conservation du signal associé à l'IMC manquant}
+Comme l'a montré le chapitre~\ref{chap:eda}, l'absence d'IMC est associée à un taux de \texttt{stroke=1} de 19,90\,\%, contre 4,26\,\% lorsque l'IMC est renseigné (tableau~\ref{tab:eda-bmi-missing}). Remplacer directement les valeurs absentes par une valeur centrale ferait perdre cette information de disponibilité.
+
+Le notebook crée donc la variable binaire \texttt{bmi\_missing} \textbf{avant l'imputation} :
+\[
+\texttt{bmi\_missing}_i =
+\begin{cases}
+1 & \text{si l'IMC de l'observation } i \text{ est manquant},\\
+0 & \text{sinon.}
+\end{cases}
+\]
+L'IMC et son indicateur sont ainsi deux caractéristiques distinctes : la première contient la mesure imputée, tandis que la seconde signale qu'elle n'a pas été observée initialement. Cette représentation conserve un signal prédictif potentiel sans attribuer de causalité à la non-réponse et sans remplacer l'information manquante par un indicateur clinique inventé.
+
+\subsection{Valeurs extrêmes et plafonnement de l'IMC}
+L'EDA a relevé un IMC maximal de 97,6, au-delà de la borne supérieure de 47,5 obtenue par la règle de l'écart interquartile. Le prétraitement plafonne les valeurs d'IMC à 60 :
+\[
+\texttt{bmi}_{i}^{\,\mathrm{cap}} = \min(\texttt{bmi}_{i}, 60).
+\]
+Le seuil est appliqué comme une règle fixe, sans calculer de paramètre à partir du jeu de test. Le choix du plafonnement plutôt que de la suppression des lignes vise à limiter l'influence de valeurs extrêmes tout en conservant les autres informations du même patient. Cette conservation est importante dans un jeu où des variables telles que la glycémie moyenne diffèrent entre les classes (tableau~\ref{tab:eda-mann-whitney}) : supprimer une ligne sur le seul critère de l'IMC éliminerait également ces mesures et les antécédents associés. Le plafonnement ne prétend pas déterminer la validité clinique d'une valeur ; il réduit seulement son poids numérique dans les transformations ultérieures.
+
+\subsection{Nettoyage des modalités et encodage}
+La colonne \texttt{id} est retirée des prédicteurs, car elle identifie les enregistrements sans représenter un attribut clinique. L'unique observation portant la modalité \texttt{Other} dans \texttt{gender} est écartée dans le notebook de préparation, faute d'effectif suffisant pour estimer ou exploiter cette modalité dans ce jeu.
+
+Les variables binaires sont converties au moyen de correspondances explicites : \texttt{gender} (Female/Male), \texttt{ever\_married} (No/Yes) et \texttt{Residence\_type} (Rural/Urban). Les variables \texttt{work\_type} et \texttt{smoking\_status} sont développées avec un One-Hot Encoding au moyen de \texttt{pandas.get\_dummies}, avec \texttt{drop\_first=True}. La catégorie de référence omise évite une dépendance linéaire exacte entre toutes les colonnes d'une même variable catégorielle, notamment pour la régression logistique. Les colonnes binaires produites sont stockées sous forme d'entiers 0/1.
+
+Cette expansion est déterministe et n'utilise pas la cible. Dans le notebook, elle est effectuée avant le split pour établir une matrice de colonnes commune aux deux sous-ensembles. Cette étape consulte donc le support des modalités des variables explicatives de l'ensemble du jeu, même si elle n'en estime ni moyenne ni médiane. Pour une isolation stricte du schéma de catégories en production, une évolution recommandée consiste à ajuster un \texttt{OneHotEncoder(handle\_unknown="ignore")} sur le train uniquement, puis à sérialiser l'encodeur avec les autres transformations. Dans la version actuelle, l'ordre final des colonnes est figé dans les métadonnées et doit être respecté par l'API.
+
+\section{Séparation train/test et prévention de la fuite de données}
+\subsection{Split stratifié avant les transformations apprises}
+Après le retrait de l'unique ligne \texttt{gender=Other}, le jeu contient 5\,109 observations. La séparation est réalisée avec \texttt{train\_test\_split}, un rapport 80/20, \texttt{stratify=y} et la graine aléatoire 42. Elle produit 4\,087 observations d'entraînement et 1\,022 de test. La proportion de la classe AVC reste proche dans les deux ensembles : 4,87\,\% dans le train et 4,89\,\% dans le test.
+
+\textbf{Le split précède l'imputation et la standardisation.} C'est une contrainte essentielle : le jeu de test doit rester une approximation indépendante de données futures, et ne doit pas contribuer à l'estimation des paramètres qui seront ensuite évalués sur lui.
+
+\subsection{Pourquoi les statistiques globales créeraient une fuite}
+Soit \(X_{\mathrm{train}}\) le jeu d'entraînement et \(X_{\mathrm{test}}\) le jeu réservé à l'évaluation. La médiane d'imputation doit être estimée à partir du train :
+\[
+\widehat{m}_{\mathrm{train}}
+= \operatorname{median}\!\left(X_{\mathrm{train}}^{\mathrm{IMC}}\right).
+\]
+De même, pour chaque variable numérique \(j\), la standardisation utilise uniquement la moyenne et l'écart-type du train :
+\[
+\widehat{\mu}_{j,\mathrm{train}}
+= \frac{1}{n_{\mathrm{train}}}\sum_{i \in \mathrm{train}} x_{ij},
+\qquad
+\widehat{\sigma}_{j,\mathrm{train}}
+= \sqrt{\frac{1}{n_{\mathrm{train}}}\sum_{i \in \mathrm{train}}
+(x_{ij}-\widehat{\mu}_{j,\mathrm{train}})^2}.
+\]
+Les valeurs du train sont alors transformées par
+\[
+z_{ij}^{\mathrm{train}}
+= \frac{x_{ij}-\widehat{\mu}_{j,\mathrm{train}}}
+       {\widehat{\sigma}_{j,\mathrm{train}}},
+\]
+et les observations de test par les \emph{mêmes} paramètres estimés sur le train. Le jeu de test ne sert jamais à recalculer une médiane, une moyenne ou une dispersion.
+
+À l'inverse, calculer une médiane ou une moyenne sur \(X_{\mathrm{train}}\cup X_{\mathrm{test}}\) rendrait les transformations dépendantes de la distribution du jeu de test. Même sans utiliser explicitement ses étiquettes, le protocole aurait déjà incorporé des informations sur les observations réservées à l'évaluation. La mesure finale ne représenterait donc plus une évaluation strictement indépendante et pourrait être artificiellement optimiste ou déplacée selon la distribution du test.
+
+\subsection{Ajustement de l'imputeur et du scaler}
+L'imputeur \texttt{SimpleImputer(strategy="median")} est ajusté sur la colonne \texttt{bmi} du train ; sa médiane estimée est 28,10. La méthode \texttt{transform} applique ensuite cette valeur au train et au test, sans réajustement sur ce dernier. Le contrôle du notebook confirme qu'il ne subsiste aucune valeur manquante après transformation.
+
+Le \texttt{StandardScaler} est ajusté uniquement sur \texttt{age}, \texttt{avg\_glucose\_level} et \texttt{bmi} du train, puis appliqué au test avec les paramètres enregistrés. Les variables binaires, les indicateurs et les colonnes One-Hot ne sont pas standardisés. Ce traitement limite les écarts d'échelle pour les algorithmes sensibles aux distances ou aux amplitudes numériques, sans laisser le jeu de test influer sur les statistiques de centrage et de réduction.
+
+\section{Persistance des transformations et contrat de l'API}
+Pour que l'inférence reproduise le traitement de l'entraînement, le notebook sauvegarde l'imputeur et le scaler ajustés dans \texttt{bmi\_imputer.joblib} et \texttt{scaler.joblib}. Le fichier \texttt{preprocessing\_metadata.json} documente notamment la cible, les correspondances binaires, la liste ordonnée des colonnes finales, les variables numériques, le plafond d'IMC et le nom de l'indicateur de données manquantes.
+
+L'ordre des caractéristiques constitue un contrat d'interface : un même vecteur numérique placé dans une colonne différente n'a plus la même signification pour le modèle. La liste \texttt{feature\_columns} doit donc être utilisée pour ordonner les entrées de l'API avant l'appel au modèle. De même, l'API doit réutiliser les correspondances catégorielles et les objets d'imputation et de standardisation sauvegardés ; elle ne doit jamais réestimer ces transformations à partir d'une requête ou d'un lot de nouveaux patients.
+
+Dans une architecture FastAPI, ces fichiers doivent être versionnés avec le modèle correspondant, chargés depuis un emplacement contrôlé et remplacés de manière atomique lors d'une nouvelle mise à jour. Les artefacts \texttt{joblib} ne doivent être chargés que depuis une source de confiance. Enfin, les données de santé transmises à l'API et les journaux applicatifs doivent suivre les règles de contrôle d'accès, de minimisation et de protection des données du projet ; les identifiants directs ne sont pas des caractéristiques du modèle et ne doivent pas être réintroduits dans les vecteurs d'inférence.
+
+\section{Synthèse}
+Le protocole sépare explicitement les règles fixes de préparation des statistiques apprises. Il conserve l'information de non-réponse de l'IMC, limite l'influence des valeurs extrêmes sans éliminer les autres caractéristiques des patients et fige les transformations dépendantes de la distribution en les ajustant exclusivement sur le train. La sérialisation des paramètres et de l'ordre des colonnes fournit enfin un contrat reproductible entre l'entraînement et l'API, sous réserve de compléter le schéma One-Hot par une politique explicite de gestion des catégories inconnues avant toute mise en production.
