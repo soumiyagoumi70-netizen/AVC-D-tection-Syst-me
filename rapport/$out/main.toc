@@ -1,0 +1,4 @@
+\babel@toc {french}{}\relax 
+\contentsline {chapter}{Résumé}{i}{Doc-Start}%
+\contentsline {chapter}{Abstract}{ii}{Doc-Start}%
+\contentsline {chapter}{Liste des abréviations}{v}{Doc-Start}%

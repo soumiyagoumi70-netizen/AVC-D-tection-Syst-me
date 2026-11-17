@@ -1,0 +1,34 @@
+\chapter*{Introduction Générale}
+\addcontentsline{toc}{chapter}{Introduction Générale}
+\vspace*{-1.1cm}
+\begingroup
+\footnotesize
+\setlength{\parskip}{0.28em}
+\setlength{\parindent}{0pt}
+
+\section*{Contexte et motivation}
+L'accident vasculaire cérébral (AVC) constitue une urgence médicale dont les conséquences dépendent notamment de la rapidité de la prise en charge. Selon l'Organisation mondiale de la Santé, les estimations pour 2021 recensent 93,8 millions de cas d'AVC et 11,9 millions de nouveaux cas dans le monde ; l'AVC figurait alors parmi les principales causes de décès et d'incapacité \cite{who_stroke_2025}. La prévention et l'orientation rapide des personnes à risque représentent donc des enjeux importants pour les systèmes de santé.
+
+Les données de santé ouvrent des possibilités d'aide à la décision, à condition de distinguer clairement un score statistique d'une conclusion clinique. Le projet \textit{Neuro-Triage} étudie la capacité de modèles d'apprentissage automatique à repérer, parmi des caractéristiques tabulaires telles que l'âge, l'hypertension, les antécédents cardiaques, la glycémie moyenne et l'indice de masse corporelle (IMC), les observations associées à la classe AVC. Le jeu utilisé comprend initialement 5\,110 observations ; la classe positive en représente 4,87\,\%. Ce déséquilibre rend trompeuse une lecture de l'exactitude globale : un classifieur qui prédit systématiquement l'absence d'AVC atteindrait déjà environ 95\,\% d'exactitude, tout en ne détectant aucun cas positif.
+
+\section*{Problématique}
+La problématique est donc de construire et d'évaluer un système de priorisation qui ne privilégie pas artificiellement la classe majoritaire. Dans le cadre expérimental retenu, le rappel de la classe AVC est prioritaire, car les faux négatifs correspondent à des cas positifs manqués. Cette priorité doit toutefois être mise en regard de la précision et de la spécificité : un seuil trop bas peut augmenter fortement les alertes erronées et réduire l'utilité opérationnelle du système. Les courbes précision-rappel sont particulièrement informatives dans un contexte de classes rares \cite{saito2015precisionrecall}.
+
+La question de recherche traitée est la suivante : \textit{comment comparer des modèles de classification et choisir un seuil de décision qui améliore le rappel de la classe AVC, tout en contrôlant la spécificité et en limitant les biais d'évaluation ?} Le projet fixe, pour sa sélection expérimentale, un plancher de spécificité de 0,70. Cette valeur est une contrainte méthodologique définie pour l'étude ; elle ne constitue ni une recommandation clinique universelle ni une preuve d'aptitude à un déploiement médical.
+
+\section*{Objectifs et démarche}
+Le travail poursuit quatre objectifs :
+\begin{itemize}
+    \item caractériser la distribution de la cible, les valeurs manquantes et les associations observées dans le jeu de données ;
+    \item construire un prétraitement reproductible qui sépare les transformations apprises sur le train de celles appliquées au test, et conserve l'information portée par l'absence d'IMC ;
+    \item comparer plusieurs familles de modèles sous validation croisée stratifiée, en plaçant le rééchantillonnage SMOTE dans des pipelines pour éviter qu'il n'affecte les plis de validation ;
+    \item optimiser le seuil sur des probabilités hors pli du train à l'aide du score $F_2$, puis réserver le jeu de test à l'évaluation finale.
+\end{itemize}
+
+Le choix du score $F_2$ traduit, dans le protocole, une importance plus élevée accordée au rappel qu'à la précision. Il ne supprime pas pour autant le compromis entre faux négatifs et faux positifs : la sélection des modèles est également soumise au plancher de spécificité défini précédemment. La régression logistique pondérée est conservée comme référence interprétable, à côté de modèles d'ensemble régularisés.
+
+Il convient enfin de préciser la portée du résultat attendu. Le jeu de données comporte une étiquette binaire « stroke », mais ne documente pas à lui seul un protocole prospectif ni l'instant auquel les variables ont été recueillies par rapport à l'apparition des symptômes. L'étude mesure donc une performance de classification sur ce jeu et ne démontre pas une détection pré-symptomatique. Le modèle produit un score expérimental d'aide à la priorisation ; il ne remplace ni l'évaluation clinique ni les examens diagnostiques.
+
+\section*{Organisation du rapport}
+Le rapport est organisé en quatre chapitres. Le premier présente le jeu de données et les résultats de l'analyse exploratoire. Le deuxième détaille le prétraitement et les mesures de prévention de la fuite de données. Le troisième expose le protocole de modélisation, le benchmark et la validation croisée. Le quatrième présente l'optimisation du seuil, l'évaluation sur le jeu de test et les limites de l'étude. Une conclusion générale synthétise les résultats et les perspectives.
+\endgroup

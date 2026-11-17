@@ -1,0 +1,102 @@
+% !TEX program = pdflatex
+\documentclass{rapportENSIAS}
+
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage[table]{xcolor}
+\usepackage{csquotes}
+\usepackage[Glenn]{fncychap}
+\usepackage{caption}
+\usepackage{indentfirst}
+\usepackage{etoolbox}
+\captionsetup{hypcap=false}
+\graphicspath{{figures/}}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black,
+    filecolor=magenta,
+    urlcolor=blue,
+    pdftitle={Neuro-Triage : Développement d'un Système de Détection Précoce des AVC par Apprentissage Automatique},
+    hypertexnames=false
+}
+
+\makeatletter
+\pretocmd{\@makechapterhead}{\vspace*{3cm}}{}{}
+\makeatother
+
+\renewcommand{\cftchappresnum}{Chapitre\ }
+\renewcommand{\cftchapaftersnum}{ :}
+\renewcommand{\cftchapnumwidth}{3cm}
+
+\begin{document}
+\raggedbottom
+\setcounter{secnumdepth}{3}
+\setcounter{tocdepth}{3}
+\setlength{\parindent}{1cm}
+
+\titre{Neuro-Triage : Développement d'un Système de Détection Précoce des AVC par Apprentissage Automatique}
+\UE{Projet de Machine Learning}
+\sujet{Spécialisation : Data and Software Sciences}
+\enseignant{À compléter}
+\eleves{À compléter}
+\jury{À compléter}
+\dateSoutenance{À compléter}
+\anneeUniversitaire{À compléter}
+
+\fairemarges
+\fairepagedegarde
+\clearpage
+\pagenumbering{roman}
+\setcounter{page}{1}
+\pagestyle{plain}
+
+\input{chapters/remerciements}
+
+\chapter*{Résumé}
+\addcontentsline{toc}{chapter}{Résumé}
+\input{chapters/resume}
+\clearpage
+
+\chapter*{Abstract}
+\addcontentsline{toc}{chapter}{Abstract}
+\input{chapters/abstract}
+\clearpage
+
+\null
+\thispagestyle{plain}
+\clearpage
+
+\tableofcontents
+\clearpage
+
+\chapter*{Liste des Abréviations}
+\addcontentsline{toc}{chapter}{Liste des abréviations}
+\input{chapters/abreviations}
+\clearpage
+
+\listoffigures
+\clearpage
+\listoftables
+\clearpage
+
+\input{chapters/introduction}
+
+\clearpage
+\pagenumbering{arabic}
+\input{chapters/01_eda}
+\input{chapters/02_pretraitement}
+\input{chapters/03_modelisation}
+\input{chapters/04_evaluation}
+\input{chapters/conclusion}
+
+\clearpage
+\phantomsection
+\addcontentsline{toc}{chapter}{Bibliographie}
+\nocite{*}
+\bibliographystyle{plain}
+\bibliography{references}
+
+\end{document}

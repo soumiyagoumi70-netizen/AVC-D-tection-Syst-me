@@ -1,0 +1,28 @@
+{
+  "model_name": "RandomForest",
+  "date_utc": "2026-11-17T15:06:31.585984+00:00",
+  "decision_threshold": 0.5792571442648802,
+  "threshold_objective": "F2 maximized on training out-of-fold probabilities",
+  "selection_rule": "Highest OOF recall among models meeting the pre-set specificity floor",
+  "minimum_specificity": 0.7,
+  "oof_recall": 0.7688442211055276,
+  "oof_specificity": 0.7757201646090535,
+  "feature_order": [
+    "gender",
+    "age",
+    "hypertension",
+    "heart_disease",
+    "ever_married",
+    "Residence_type",
+    "avg_glucose_level",
+    "bmi",
+    "bmi_missing",
+    "work_type_Never_worked",
+    "work_type_Private",
+    "work_type_Self-employed",
+    "work_type_children",
+    "smoking_status_formerly smoked",
+    "smoking_status_never smoked",
+    "smoking_status_smokes"
+  ]
+}
