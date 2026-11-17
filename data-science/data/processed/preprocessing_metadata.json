@@ -1,0 +1,42 @@
+{
+  "target": "stroke",
+  "binary_mappings": {
+    "gender": {
+      "Female": 0,
+      "Male": 1
+    },
+    "ever_married": {
+      "No": 0,
+      "Yes": 1
+    },
+    "Residence_type": {
+      "Rural": 0,
+      "Urban": 1
+    }
+  },
+  "feature_columns": [
+    "gender",
+    "age",
+    "hypertension",
+    "heart_disease",
+    "ever_married",
+    "Residence_type",
+    "avg_glucose_level",
+    "bmi",
+    "bmi_missing",
+    "work_type_Never_worked",
+    "work_type_Private",
+    "work_type_Self-employed",
+    "work_type_children",
+    "smoking_status_formerly smoked",
+    "smoking_status_never smoked",
+    "smoking_status_smokes"
+  ],
+  "numeric_features": [
+    "age",
+    "avg_glucose_level",
+    "bmi"
+  ],
+  "bmi_upper_clip": 60,
+  "bmi_missing_indicator": "bmi_missing"
+}
