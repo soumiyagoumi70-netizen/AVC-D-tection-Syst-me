@@ -1,1 +1,8 @@
-% Resume a rediger apres validation des resultats finaux.
+Ce projet étudie la faisabilité d'un système d'aide à la détection précoce des accidents vasculaires cérébraux (AVC) à partir de données fortement déséquilibrées. Le jeu initial comprend 5\,110 observations, dont 4,87\,\% présentent un AVC. L'analyse exploratoire révèle une association entre l'absence de mesure de l'indice de masse corporelle (IMC) et la prévalence observée de l'AVC : 19,90\,\% lorsque l'IMC est manquant, contre 4,26\,\% lorsqu'il est renseigné. Un indicateur dédié permet de conserver ce signal sans lui attribuer une interprétation causale.
+
+Le prétraitement sépare les ensembles d'entraînement et de test avant l'ajustement de l'imputation et de la standardisation. Cinq familles de modèles sont comparées par validation croisée stratifiée, avec pondération des classes ou SMOTE appliqué uniquement aux plis d'entraînement. Les seuils de décision sont ensuite optimisés à partir de probabilités hors pli du train en maximisant le score \(F_2\), sous réserve d'un plancher de spécificité de 0,70. La Random Forest est retenue par la règle de sélection fondée sur les métriques hors pli.
+
+Sur le test indépendant, composé de 1\,022 observations dont 50 AVC, le modèle retenu, au seuil \(0.5792571442648802\), atteint un rappel de 0,80 et une spécificité de 0,766. Il manque 10 cas AVC, mais génère également 227 faux positifs, ce qui souligne le compromis entre sensibilité et charge d'alertes. Ces résultats sont exploratoires et ne constituent pas une validation clinique ; une évaluation externe et une revue avec des professionnels de santé sont nécessaires avant tout déploiement.
+
+\medskip
+\noindent\textbf{Mots-clés :} AVC, données déséquilibrées, prétraitement, SMOTE, validation croisée, rappel, score \(F_2\), optimisation du seuil.

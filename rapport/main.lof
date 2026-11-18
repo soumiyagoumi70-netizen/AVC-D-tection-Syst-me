@@ -1,0 +1,11 @@
+\babel@toc {french}{}\relax 
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {1.1}{\ignorespaces Distribution de la variable cible \texttt {stroke}}}{2}{figure.11}%
+\contentsline {figure}{\numberline {1.2}{\ignorespaces Distributions des variables numériques dans le jeu brut}}{3}{figure.14}%
+\contentsline {figure}{\numberline {1.3}{\ignorespaces Distributions des variables numériques par classe de \texttt {stroke}}}{4}{figure.17}%
+\contentsline {figure}{\numberline {1.4}{\ignorespaces Taux d'AVC observé par tranche d'âge}}{5}{figure.23}%
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {4.1}{\ignorespaces Score \(F_2\) selon le seuil, calculé sur les probabilités out-of-fold du jeu d'entraînement. Les lignes verticales indiquent les seuils maximisant le \(F_2\) pour chaque modèle.}}{17}{figure.55}%
+\contentsline {figure}{\numberline {4.2}{\ignorespaces Matrices de confusion sur le test pour les trois modèles et leurs seuils optimisés sur le train. Les faux négatifs, situés en bas à gauche, sont encadrés en rouge.}}{19}{figure.60}%

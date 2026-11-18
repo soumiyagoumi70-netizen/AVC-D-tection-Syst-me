@@ -74,7 +74,7 @@
 \hfill
 \begin{minipage}[c]{0.42\textwidth}
     \raggedleft
-    {\scshape\Large\color{coverblue} Neuro-Triage}
+    \includegraphics[width=0.62\linewidth]{logos/um5logo.png}
 \end{minipage}
 
 \vspace{1.15cm}
@@ -123,7 +123,7 @@
 \begin{center}
     \begin{minipage}{0.78\textwidth}
         \centering
-        {\large\bfseries\color{coverblue} Soutenu le \dateSoutenance devant le jury composé de :}\par
+        {\large\bfseries\color{coverblue} Soutenu le \dateSoutenance{} devant le jury composé de :}\par
         \vspace{0.25cm}
         {\large \jury \par}
     \end{minipage}

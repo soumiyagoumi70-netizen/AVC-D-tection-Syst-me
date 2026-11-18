@@ -1,1 +1,8 @@
-% Abstract a rediger apres validation des resultats finaux.
+This project investigates the feasibility of an early stroke detection support system using a strongly imbalanced dataset. The original dataset contains 5,110 observations, of which 4.87\% are positive for stroke. Exploratory analysis identifies an association between missing body mass index (BMI) values and observed stroke prevalence: 19.90\% when BMI is missing, compared with 4.26\% when it is available. A dedicated missingness indicator preserves this information without implying a causal relationship.
+
+The preprocessing workflow separates the training and test sets before fitting the imputer and standard scaler. Five model families are compared using stratified cross-validation, with class weighting or SMOTE applied only to training folds. Decision thresholds are then optimized on out-of-fold training probabilities by maximizing the \(F_2\)-score, subject to a minimum specificity of 0.70. The Random Forest is selected according to the pre-established rule based on out-of-fold metrics.
+
+On the independent test set of 1,022 observations, including 50 stroke cases, the selected model, at threshold \(0.5792571442648802\), achieves a recall of 0.80 and a specificity of 0.766. It misses 10 stroke cases and produces 227 false positives, highlighting the trade-off between sensitivity and alert burden. These results are exploratory and do not establish clinical validity; external evaluation and review with healthcare professionals are required before deployment.
+
+\medskip
+\noindent\textbf{Keywords:} stroke, imbalanced data, preprocessing, SMOTE, cross-validation, recall, \(F_2\)-score, threshold optimization.

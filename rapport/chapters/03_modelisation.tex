@@ -1,1 +1,94 @@
-% Chapitre 3 : benchmark, validation croisee et selection des modeles.
+\chapter{Modélisation et benchmark des algorithmes}
+\label{chap:modelisation}
+\thispagestyle{plain}
+
+\section{Protocole expérimental}
+Le jeu d'entraînement fourni par le prétraitement contient 4\,087 observations, dont environ 4,87\,\% appartiennent à la classe \texttt{stroke=1}. Le benchmark compare cinq familles d'algorithmes : régression logistique, K plus proches voisins (KNN), arbre de décision, forêt aléatoire et XGBoost. Pour chaque famille, les variantes applicables sans correction du déséquilibre, avec pondération des classes ou avec sur-échantillonnage sont confrontées selon la disponibilité de ces mécanismes dans l'algorithme.
+
+Les scores sont estimés par une validation croisée stratifiée à cinq plis, avec mélange des observations et une graine fixée à 42. Le protocole utilise \texttt{StratifiedKFold} avec \texttt{n\_splits=5}, \texttt{shuffle=True} et \texttt{random\_state=42}. La stratification maintient une proportion comparable de cas positifs dans les plis d'entraînement et de validation. Les métriques rapportées sont les moyennes des scores obtenus sur ces cinq plis ; elles caractérisent le protocole de validation croisée et ne remplacent pas l'évaluation finale sur le jeu de test indépendant.
+
+\section{Métriques adaptées à une cible rare}
+\subsection{Limites de l'exactitude}
+L'exactitude, ou \textit{accuracy}, est la proportion d'observations correctement classées. Sur ce jeu, un classifieur prédisant systématiquement la classe « sain » obtiendrait environ 95,13\,\% d'exactitude, correspondant à la proportion de la classe majoritaire, mais son rappel de la classe AVC serait nul. Une telle exactitude masquerait donc l'incapacité du modèle à détecter les cas d'intérêt. Pour cette raison, l'exactitude n'est pas utilisée comme critère principal de comparaison.
+
+\subsection{Rappel, ROC-AUC et PR-AUC}
+Le rappel de la classe positive est défini par
+\[
+\operatorname{Recall} = \frac{TP}{TP+FN},
+\]
+où \(TP\) désigne les vrais positifs et \(FN\) les faux négatifs. Il mesure la fraction des AVC observés que le modèle identifie. Dans une étude de triage, réduire les faux négatifs est un objectif prioritaire ; le rappel doit néanmoins être interprété avec la précision, car un seuil abaissé peut augmenter simultanément le nombre de faux positifs.
+
+La ROC-AUC résume la capacité de classement du modèle sur l'ensemble des seuils, en mettant en relation le taux de vrais positifs et le taux de faux positifs. Elle est utile comme mesure complémentaire, mais peut paraître favorable lorsque les négatifs sont très nombreux. La courbe précision-rappel se concentre davantage sur le comportement relatif aux positifs : la précision est \(TP/(TP+FP)\), et le rappel \(TP/(TP+FN)\). La PR-AUC est ainsi particulièrement informative pour comparer des classifieurs en présence d'une classe minoritaire \cite{saito2015precisionrecall}.
+
+Dans le notebook, le score scikit-learn \texttt{average\_precision} est utilisé comme résumé de la courbe précision-rappel. Il est présenté dans le tableau sous l'appellation PR-AUC ; il s'agit de la moyenne de précision calculée selon la convention \textit{Average Precision}, et non d'une intégration trapézoïdale arbitraire. La prévalence de la classe positive (environ 0,049) constitue un repère de référence pour interpréter ces scores.
+
+\section{Gestion du déséquilibre sans contamination des plis}
+\subsection{Pondération des classes}
+La première stratégie conserve les observations originales et augmente l'importance des erreurs sur la classe rare. Pour les estimateurs scikit-learn qui le permettent, le paramètre \texttt{class\_weight="balanced"} ajuste les poids selon les fréquences des classes observées dans les données d'entraînement. Pour XGBoost, le rapport entre le nombre de négatifs et le nombre de positifs est transmis au paramètre \texttt{scale\_pos\_weight}. Cette pondération modifie le coût d'apprentissage sans créer de nouvelles observations.
+
+\subsection{Sur-échantillonnage synthétique avec SMOTE}
+La seconde stratégie utilise SMOTE (\textit{Synthetic Minority Over-sampling Technique}), qui génère des observations minoritaires synthétiques à partir de voisins de la classe positive \cite{chawla2002smote}. Il ne suffit pas d'appliquer SMOTE une seule fois avant la validation croisée : dans ce cas, des exemples synthétiques construits à partir d'observations ultérieurement placées dans un pli de validation pourraient contaminer l'apprentissage.
+
+Pour éviter cette fuite, SMOTE est encapsulé avec l'estimateur au moyen de \texttt{make\allowbreak\_pipeline} de la bibliothèque \texttt{imblearn}. À chaque pli, la validation croisée ajuste le pipeline sur le sous-ensemble d'entraînement : le rééchantillonneur est alors ajusté et appliqué uniquement à ce sous-ensemble, puis le modèle est entraîné sur les données rééchantillonnées. Le pli de validation conserve sa distribution originale et n'intervient ni dans la génération des exemples synthétiques ni dans l'ajustement du classifieur. Cette organisation maintient la séparation entre apprentissage et validation au sein de chaque itération \cite{pedregosa2011scikit}.
+
+\section{Contrôle de la complexité des modèles arborescents}
+Les premières variantes non pondérées illustrent un problème important du jeu déséquilibré : à un seuil de décision de 0,50, la forêt aléatoire ne prédit aucun cas positif en moyenne sur les plis, et XGBoost n'en détecte qu'une faible fraction. Une bonne capacité de classement mesurée par ROC-AUC ou PR-AUC ne garantit donc pas un rappel satisfaisant au seuil par défaut. Par ailleurs, des arbres trop profonds peuvent s'ajuster aux particularités de petits sous-ensembles et produire des scores instables.
+
+Le benchmark limite la complexité des estimateurs arborescents :
+\begin{itemize}
+    \item \textbf{Arbre de décision :} profondeur maximale \texttt{max\_depth=4} ;
+    \item \textbf{Random Forest :} \texttt{max\_depth=4}, \texttt{min\_samples\_leaf=10} et \texttt{n\_estimators=100} ;
+    \item \textbf{XGBoost :} \texttt{max\_depth=3}, \texttt{learning\_rate=0.05} et \texttt{n\_estimators=100}.
+\end{itemize}
+La limitation de profondeur restreint les interactions apprises par chaque arbre ; une taille minimale de feuille plus importante stabilise les estimations de la forêt. Pour XGBoost, le taux d'apprentissage réduit limite l'ampleur de la contribution de chaque arbre ajouté. Ces réglages constituent une régularisation explicite, sans garantir à eux seuls l'absence de sur-apprentissage.
+
+\section{Résultats du benchmark}
+Le tableau~\ref{tab:benchmark-modeles} synthétise les moyennes de rappel, d'Average Precision (PR-AUC) et de ROC-AUC observées en validation croisée. Les résultats sont triés par PR-AUC décroissante, conformément au notebook. Les prédictions de classe utilisées pour le rappel reposent sur le seuil par défaut de 0,50.
+
+\begin{table}[H]
+    \centering
+    \caption{Résultats moyens de la validation croisée stratifiée à cinq plis}
+    \label{tab:benchmark-modeles}
+    \small
+    \renewcommand{\arraystretch}{1.12}
+    \begin{tabular}{@{}lrrr@{}}
+        \toprule
+        \textbf{Modèle et stratégie} & \textbf{Recall} & \textbf{PR-AUC (AP)} & \textbf{ROC-AUC}\\
+        \midrule
+        RandomForest (aucune) & 0,000 & 0,250 & 0,851\\
+        LogisticRegression (aucune) & 0,020 & 0,227 & 0,853\\
+        XGBoost (aucune) & 0,015 & 0,226 & 0,841\\
+        LogisticRegression (\texttt{class\_weight}) & 0,799 & 0,225 & 0,854\\
+        XGBoost (\texttt{scale\_pos\_weight}) & 0,784 & 0,218 & 0,837\\
+        RandomForest (\texttt{class\_weight}) & 0,884 & 0,216 & 0,845\\
+        DecisionTree (aucune) & 0,076 & 0,200 & 0,826\\
+        RandomForest (SMOTE) & 0,879 & 0,192 & 0,823\\
+        LogisticRegression (SMOTE) & 0,684 & 0,182 & 0,816\\
+        DecisionTree (\texttt{class\_weight}) & 0,784 & 0,181 & 0,820\\
+        XGBoost (SMOTE) & 0,704 & 0,175 & 0,806\\
+        DecisionTree (SMOTE) & 0,789 & 0,128 & 0,793\\
+        KNN (aucun) & 0,020 & 0,092 & 0,634\\
+        KNN (SMOTE) & 0,433 & 0,089 & 0,686\\
+        \bottomrule
+    \end{tabular}
+
+    \vspace{0.15cm}
+    \begin{minipage}{0.94\textwidth}
+        \footnotesize
+        \textit{Note :} les métriques sont des moyennes sur cinq plis. Le rappel est calculé avec le seuil usuel de 0,50 ; la colonne PR-AUC correspond à \texttt{average\_precision}. Les valeurs sont arrondies à trois décimales.
+    \end{minipage}
+\end{table}
+
+La pondération des classes augmente fortement le rappel de la régression logistique, qui atteint 0,799, avec une ROC-AUC de 0,854 et une PR-AUC de 0,225. Sa précision moyenne au seuil de 0,50 demeure toutefois faible (0,142 dans le benchmark), ce qui traduit un volume potentiel d'alertes positives erronées à examiner lors de l'évaluation du seuil.
+
+La Random Forest sans correction obtient la PR-AUC la plus élevée du tableau (0,250), mais son rappel au seuil 0,50 est nul. Ce résultat souligne la distinction entre la qualité du classement des scores et la décision binaire induite par un seuil donné. La Random Forest pondérée atteint le rappel moyen le plus élevé (0,884), mais sa PR-AUC est inférieure (0,216). XGBoost sans correction est retenu comme meilleure variante de sa famille selon la PR-AUC (0,226), alors que son rappel au seuil par défaut reste très faible (0,015). Ces écarts justifient de ne pas sélectionner un modèle à partir d'une seule métrique ou du seul seuil par défaut.
+
+\section{Sélection des modèles pour l'évaluation finale}
+La régression logistique avec \texttt{class\_weight="balanced"} est conservée comme \textbf{baseline clinique} : sa forme linéaire et ses coefficients la rendent plus transparente que les méthodes d'ensemble, tandis que son rappel de 0,799 et sa ROC-AUC de 0,854 fournissent un point de comparaison solide. Elle n'est toutefois pas présentée comme une solution cliniquement validée ; sa précision et son utilité opérationnelle doivent être appréciées avec le seuil choisi et le coût des faux positifs.
+
+À ses côtés, le notebook retient les meilleures variantes de Random Forest et de XGBoost selon la PR-AUC de leur famille, soit RandomForest (aucune) et XGBoost (aucune) dans l'exécution documentée. La valeur de PR-AUC de ces variantes ne doit pas être confondue avec leur rappel au seuil 0,50, particulièrement faible dans le benchmark.
+
+\section{Conclusion}
+Le benchmark montre que les choix de pondération, de rééchantillonnage, de complexité des arbres et de seuil répondent à des aspects différents du problème. La validation croisée avec SMOTE encapsulé dans un pipeline protège les plis de validation contre la contamination, tandis que la PR-AUC et le rappel rendent visibles les compromis propres à la classe minoritaire.
+
+Enfin, le seuil de décision par défaut de 0,50 s'avère inadapté pour les variantes d'ensemble retenues : malgré des PR-AUC intéressantes, leur rappel au seuil usuel est proche de zéro. Le chapitre suivant étudie donc le \textit{Threshold Tuning} à partir de probabilités hors pli, avec un objectif favorisant le rappel et une contrainte de spécificité fixée dans le protocole.
